@@ -314,6 +314,11 @@
         <div id="contributors-list" class="divide-y divide-gray-200 dark:divide-gray-700">
           <!-- Contributors will be loaded here -->
         </div>
+        <div id="load-more-container" class="p-6 border-t border-gray-200 dark:border-gray-700 text-center hidden">
+          <button id="load-more-btn" class="px-6 py-2 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 transition-colors">
+            Show More
+          </button>
+        </div>
       </div>
 
       <!-- Call to Action -->
@@ -850,6 +855,8 @@
     };
 
     let activeSeason = '2026';
+    let allContributors = [];
+    let visibleCount = 10;
 
     function toSafeNumber(value) {
       const parsed = Number(value);
@@ -892,17 +899,21 @@
 
     function renderContributors(contributors) {
       const container = document.getElementById('contributors-list');
+      const loadMoreContainer = document.getElementById('load-more-container');
       
       if (contributors.length === 0) {
         renderEmptyState(container, 'Contributor data will be updated once the GSoC program begins.');
         updateStats([]);
+        if (loadMoreContainer) loadMoreContainer.classList.add('hidden');
         return;
       }
+
+      const contributorsToShow = contributors.slice(0, visibleCount);
 
       const rankSymbols = ['🥇', '🥈', '🥉'];
       const rankColors = ['bg-yellow-500', 'bg-gray-400', 'bg-amber-600'];
 
-      container.innerHTML = contributors.map((contributor, index) => {
+      container.innerHTML = contributorsToShow.map((contributor, index) => {
         const rankSymbol = rankSymbols[index] || '';
         const rankColor = rankColors[index] || 'bg-blue-500';
         const safeAvatarUrl = toSafeHttpUrl(contributor.avatar_url);
@@ -970,8 +981,27 @@
         `;
       }).join('');
 
+      if (loadMoreContainer) {
+        if (visibleCount < contributors.length) {
+          loadMoreContainer.classList.remove('hidden');
+        } else {
+          loadMoreContainer.classList.add('hidden');
+        }
+      }
+
       updateStats(contributors);
     }
+
+    // Set up load more button listener
+    document.addEventListener('DOMContentLoaded', () => {
+      const loadMoreBtn = document.getElementById('load-more-btn');
+      if (loadMoreBtn) {
+        loadMoreBtn.addEventListener('click', () => {
+          visibleCount += 10;
+          renderContributors(allContributors);
+        });
+      }
+    });
 
     function setActiveTab(season) {
       const tabs = document.querySelectorAll('.leaderboard-tab');
@@ -1012,7 +1042,9 @@
             return toSafeNumber(b?.merged_pr_count) - toSafeNumber(a?.merged_pr_count);
           });
 
-        renderContributors(contributors);
+        allContributors = contributors;
+        visibleCount = 10; // reset on fetch
+        renderContributors(allContributors);
       } catch (error) {
         const isFileProtocol = window.location.protocol === 'file:';
         const errorMessage = isFileProtocol
